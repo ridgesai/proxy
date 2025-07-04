@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Ridges AI Proxy", version="1.0.0")
 
-# Configure CORS with WebSocket support
+# Configure CORS - removed invalid allow_websockets parameter
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
-    allow_websockets=True  # Enable WebSocket support
+    allow_headers=["*"]
 )
 
 # Include routers
@@ -98,4 +97,4 @@ if __name__ == "__main__":
         port=args.port,
         ws_ping_timeout=None,
         ws_max_size=10 * 1024 * 1024  # 10MB max message size
-    )
+    ) 
