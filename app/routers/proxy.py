@@ -22,12 +22,8 @@ router = APIRouter()
 
 @router.post("/embedding")
 async def embedding(request: EmbeddingRequest):
-    # Log the complete request for debugging
-    logger.info(f"=== EMBEDDING REQUEST RECEIVED ===")
-    logger.info(f"Run ID: {request.run_id}")
-    logger.info(f"Input: {request.input}")
-    logger.info(f"Request dict: {request.dict()}")
-    logger.info(f"=====================================")
+    # Log basic request info
+    logger.info(f"Embedding request - run_id: {request.run_id}")
     
     # Validate run_id format before proceeding
     try:
@@ -70,23 +66,16 @@ async def embedding(request: EmbeddingRequest):
     # Rest of the embedding function
     try:
         embedding = await chutes.embed(request.run_id, request.input)
-        logger.info(f"Successfully generated embedding for run_id: {request.run_id}")
+        logger.info(f"Embedding SUCCESS - run_id: {request.run_id}")
         return embedding
     except Exception as e:
-        logger.error(f"Error getting embedding for {request.run_id}: {e}")
+        logger.error(f"Embedding FAILED - run_id: {request.run_id}, error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get embedding due to internal server error")
 
 @router.post("/inference") 
 async def inference(request: InferenceRequest):
-    # Log the complete request for debugging
-    logger.info(f"=== INFERENCE REQUEST RECEIVED ===")
-    logger.info(f"Run ID: {request.run_id}")
-    logger.info(f"Model: {request.model}")
-    logger.info(f"Temperature: {request.temperature}")
-    logger.info(f"Messages count: {len(request.messages)}")
-    logger.info(f"Messages: {json.dumps([msg.dict() for msg in request.messages], indent=2)}")
-    logger.info(f"Full request dict: {request.dict()}")
-    logger.info(f"===================================")
+    # Log basic request info
+    logger.info(f"Inference request - run_id: {request.run_id}, model: {request.model}")
     
     # Validate run_id format before proceeding
     try:
@@ -134,10 +123,10 @@ async def inference(request: InferenceRequest):
             request.temperature,
             request.model
         )
-        logger.info(f"Successfully generated inference response for run_id: {request.run_id}")
+        logger.info(f"Inference SUCCESS - run_id: {request.run_id}, model: {request.model}")
         return response
     except Exception as e:
-        logger.error(f"Error getting inference for {request.run_id}: {e}")
+        logger.error(f"Inference FAILED - run_id: {request.run_id}, model: {request.model}, error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get inference due to internal server error")
 
 router = APIRouter()
