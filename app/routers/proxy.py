@@ -50,17 +50,17 @@ async def embedding(request: EmbeddingRequest):
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
+    except ValueError as e:
+        # Handle UUID format errors specifically
+        logger.error(f"UUID validation error for run_id {request.run_id}: {e}")
+        raise HTTPException(status_code=400, detail="Invalid run_id format")
     except SQLAlchemyError as e:
         # Handle database errors specifically
         logger.error(f"Database error for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=500, detail="Database error occurred")
-    except ValueError as e:
-        # Handle validation errors
-        logger.error(f"Validation error for run_id {request.run_id}: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         # For all other exceptions, log and stop execution
-        logger.error(f"Error during validation: {e}")
+        logger.error(f"Unexpected error during validation for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during validation")
     
     # Rest of the embedding function
@@ -102,17 +102,17 @@ async def inference(request: InferenceRequest):
     except HTTPException:
         # Re-raise HTTP exceptions
         raise
+    except ValueError as e:
+        # Handle UUID format errors specifically
+        logger.error(f"UUID validation error for run_id {request.run_id}: {e}")
+        raise HTTPException(status_code=400, detail="Invalid run_id format")
     except SQLAlchemyError as e:
         # Handle database errors specifically
         logger.error(f"Database error for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=500, detail="Database error occurred")
-    except ValueError as e:
-        # Handle validation errors
-        logger.error(f"Validation error for run_id {request.run_id}: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         # For all other exceptions, log and stop execution
-        logger.error(f"Error during validation: {e}")
+        logger.error(f"Unexpected error during validation for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during validation")
     
     # Rest of the inference function

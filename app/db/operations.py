@@ -141,27 +141,47 @@ class DatabaseManager:
         
         # Validate and convert run_id string to UUID object
         try:
-            run_id = uuid.UUID(run_id_str)
-            logger.info(f"Valid UUID format: {run_id}")
+            run_id_uuid = uuid.UUID(run_id_str)
+            logger.debug(f"Converted string '{run_id_str}' to UUID: {run_id_uuid}")
         except ValueError as e:
             logger.error(f"Invalid UUID format for run_id: {run_id_str}")
             raise ValueError(f"Invalid UUID format: {run_id_str}") from e
             
         async with self.AsyncSessionLocal() as session:
             try:
-                # Use the UUID object for the query
-                logger.info(f"Querying database for run_id UUID: {run_id}")
-                stmt = select(EvaluationRun).where(EvaluationRun.run_id == run_id)
+                # Query using the UUID object directly
+                logger.debug(f"Querying database for run_id UUID: {run_id_uuid}")
+                stmt = select(EvaluationRun).where(EvaluationRun.run_id == run_id_uuid)
                 result = await session.execute(stmt)
                 evaluation_run = result.scalar_one_or_none()
                 
                 if evaluation_run:
-                    logger.info(f"Found evaluation run with ID {run_id_str}")
+                    logger.info(f"Found evaluation run with ID {run_id_str}, status: {evaluation_run.status}")
+                    return evaluation_run
                 else:
                     logger.info(f"No evaluation run found with ID {run_id_str}")
+                    return None
                     
-                return evaluation_run
             except Exception as e:
-                logger.error(f"Error getting evaluation run {run_id_str}: {e}")
-                raise
+                logger.error(f"Database error getting evaluation run {run_id_str}: {e}")
+                # Try alternative query method as fallback
+                try:
+                    logger.info(f"Trying alternative query method for run_id: {run_id_str}")
+                    # Cast the UUID to text for comparison if needed
+                    stmt_alt = select(EvaluationRun).where(
+                        text("run_id::text = :run_id_str")
+                    ).params(run_id_str=str(run_id_uuid))
+                    result_alt = await session.execute(stmt_alt)
+                    evaluation_run_alt = result_alt.scalar_one_or_none()
+                    
+                    if evaluation_run_alt:
+                        logger.info(f"Found evaluation run using alternative method: {run_id_str}")
+                        return evaluation_run_alt
+                    else:
+                        logger.info(f"No evaluation run found using alternative method: {run_id_str}")
+                        return None
+                        
+                except Exception as e2:
+                    logger.error(f"Alternative query also failed for {run_id_str}: {e2}")
+                    raise e
     
