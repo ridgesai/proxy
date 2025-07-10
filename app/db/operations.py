@@ -149,39 +149,47 @@ class DatabaseManager:
             
         async with self.AsyncSessionLocal() as session:
             try:
-                # Query using the UUID object directly
-                logger.debug(f"Querying database for run_id UUID: {run_id_uuid}")
+                # First, let's check what's actually in the database
+                logger.info(f"=== DEBUG: Searching for run_id: {run_id_str} ===")
+                
+                # Try to find any run_id that contains part of our UUID (debugging)
+                debug_stmt = text("SELECT run_id, status FROM evaluation_runs WHERE run_id::text LIKE :partial_id LIMIT 5")
+                debug_result = await session.execute(debug_stmt, {"partial_id": f"%{run_id_str[:8]}%"})
+                debug_rows = debug_result.fetchall()
+                logger.info(f"Found {len(debug_rows)} runs with similar prefix:")
+                for row in debug_rows:
+                    logger.info(f"  - run_id: {row[0]}, status: {row[1]}")
+                
+                # Now try the main query using UUID object directly
+                logger.info(f"Trying main query with UUID object: {run_id_uuid}")
                 stmt = select(EvaluationRun).where(EvaluationRun.run_id == run_id_uuid)
                 result = await session.execute(stmt)
                 evaluation_run = result.scalar_one_or_none()
                 
                 if evaluation_run:
-                    logger.info(f"Found evaluation run with ID {run_id_str}, status: {evaluation_run.status}")
+                    logger.info(f"SUCCESS: Found evaluation run with ID {run_id_str}, status: {evaluation_run.status}")
                     return evaluation_run
                 else:
-                    logger.info(f"No evaluation run found with ID {run_id_str}")
-                    return None
+                    logger.info(f"Main query failed. Trying alternative methods...")
                     
-            except Exception as e:
-                logger.error(f"Database error getting evaluation run {run_id_str}: {e}")
-                # Try alternative query method as fallback
-                try:
-                    logger.info(f"Trying alternative query method for run_id: {run_id_str}")
-                    # Cast the UUID to text for comparison if needed
-                    stmt_alt = select(EvaluationRun).where(
-                        text("run_id::text = :run_id_str")
-                    ).params(run_id_str=str(run_id_uuid))
-                    result_alt = await session.execute(stmt_alt)
-                    evaluation_run_alt = result_alt.scalar_one_or_none()
+                    # Try direct text comparison
+                    stmt_text = text("SELECT * FROM evaluation_runs WHERE run_id::text = :run_id_str")
+                    result_text = await session.execute(stmt_text, {"run_id_str": run_id_str})
+                    row = result_text.fetchone()
                     
-                    if evaluation_run_alt:
-                        logger.info(f"Found evaluation run using alternative method: {run_id_str}")
-                        return evaluation_run_alt
+                    if row:
+                        logger.info(f"SUCCESS with text comparison: Found run_id {run_id_str}")
+                        # Convert row to EvaluationRun object manually if needed
+                        stmt_obj = select(EvaluationRun).where(text("run_id::text = :run_id_str")).params(run_id_str=run_id_str)
+                        result_obj = await session.execute(stmt_obj)
+                        evaluation_run = result_obj.scalar_one_or_none()
+                        return evaluation_run
                     else:
-                        logger.info(f"No evaluation run found using alternative method: {run_id_str}")
+                        logger.error(f"FAILED: No evaluation run found with ID {run_id_str} using any method")
                         return None
                         
-                except Exception as e2:
-                    logger.error(f"Alternative query also failed for {run_id_str}: {e2}")
-                    raise e
+            except Exception as e:
+                logger.error(f"Database error getting evaluation run {run_id_str}: {e}")
+                logger.error(f"Exception type: {type(e)}")
+                raise e
     
