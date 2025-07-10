@@ -7,7 +7,7 @@ import argparse
 
 from app.routers.proxy import router as proxy_router
 from app.core.chutes_manager import ChutesManager
-from app.db.operations import DatabaseManager
+from app.db.db_manager import new_db
 from app.socket.websocket_manager import WebSocketManager
 
 # Configure logging
@@ -68,8 +68,7 @@ async def startup_event():
     """Initialize services on startup"""
     try:
         # Initialize database
-        db = DatabaseManager()
-        await db.init()
+        await new_db.open()
         logger.info("Database initialized successfully")
         
         # Initialize chutes manager

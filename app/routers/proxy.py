@@ -1,18 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
 import uuid
-import os
-import json
 
 from app.core.auth import verify_request
 from app.core.chutes_manager import ChutesManager
-from app.db.operations import DatabaseManager
+from app.db.entities import SandboxStatus
+from app.db.queries.evaluations import get_run_by_id
 from app.models import EmbeddingRequest, InferenceRequest
 
 import logging
-
-db = DatabaseManager()
 
 logger = logging.getLogger(__name__)
 chutes = ChutesManager()
@@ -35,16 +30,13 @@ async def embedding(request: EmbeddingRequest):
         
     # Add database validation
     try:
-        # Ensure DB is initialized
-        await db.init()
-        
-        evaluation_run = await db.get_evaluation_run(request.run_id)
+        evaluation_run = await get_run_by_id(request.run_id)
         if not evaluation_run:
             logger.info(f"Run {request.run_id} not found in database")
             raise HTTPException(status_code=404, detail="Evaluation run not found")
                 
         # Status check - required for all requests
-        if evaluation_run.status != "sandbox_created":
+        if evaluation_run.status != SandboxStatus.sandbox_created:
             logger.info(f"Embedding for {request.run_id} was requested but evaluation run is not in sandbox_created state")
             raise HTTPException(status_code=400, detail="Evaluation run is not in the sandbox_created state")
     except HTTPException:
@@ -54,10 +46,6 @@ async def embedding(request: EmbeddingRequest):
         # Handle UUID format errors specifically
         logger.error(f"UUID validation error for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=400, detail="Invalid run_id format")
-    except SQLAlchemyError as e:
-        # Handle database errors specifically
-        logger.error(f"Database error for run_id {request.run_id}: {e}")
-        raise HTTPException(status_code=500, detail="Database error occurred")
     except Exception as e:
         # For all other exceptions, log and stop execution
         logger.error(f"Unexpected error during validation for run_id {request.run_id}: {e}")
@@ -87,16 +75,14 @@ async def inference(request: InferenceRequest):
         
     # Add database validation
     try:
-        # Ensure DB is initialized
-        await db.init()
         
-        evaluation_run = await db.get_evaluation_run(request.run_id)
+        evaluation_run = await get_run_by_id(request.run_id)
         if not evaluation_run:
             logger.info(f"Run {request.run_id} not found in database")
             raise HTTPException(status_code=404, detail="Evaluation run not found")
                 
         # Status check - required for all requests
-        if evaluation_run.status != "sandbox_created":
+        if evaluation_run.status != SandboxStatus.sandbox_created:
             logger.info(f"Inference for {request.run_id} was requested but evaluation run is not in sandbox_created state")
             raise HTTPException(status_code=400, detail="Evaluation run is not in the sandbox_created state")
     except HTTPException:
@@ -106,10 +92,6 @@ async def inference(request: InferenceRequest):
         # Handle UUID format errors specifically
         logger.error(f"UUID validation error for run_id {request.run_id}: {e}")
         raise HTTPException(status_code=400, detail="Invalid run_id format")
-    except SQLAlchemyError as e:
-        # Handle database errors specifically
-        logger.error(f"Database error for run_id {request.run_id}: {e}")
-        raise HTTPException(status_code=500, detail="Database error occurred")
     except Exception as e:
         # For all other exceptions, log and stop execution
         logger.error(f"Unexpected error during validation for run_id {request.run_id}: {e}")

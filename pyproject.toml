@@ -5,5 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "asyncpg",
     "fastapi[standard]>=0.112.1",
+    "httptools>=0.6.4",
 ]
