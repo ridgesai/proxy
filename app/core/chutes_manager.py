@@ -73,7 +73,7 @@ class ChutesManager:
         except Exception as e:
             logger.error(f"Error cleaning up old entries from Chutes pricing data: {e}")
 
-    async def embed(self, run_id: str, prompt: str, seed: str = None) -> dict:
+    async def embed(self, run_id: str, prompt: str, seed: int = None) -> dict:
         self._ensure_cleanup_task()
         
         if self.costs_data_embedding.get(run_id, {}).get("spend", 0) >= 2:
@@ -126,7 +126,7 @@ class ChutesManager:
             logger.error(f"Error in embed request: {e}")
             return f"Error in embed request: {e}"
     
-    async def inference(self, run_id: str, messages: List[GPTMessage], temperature: float = 0.7, model: str = "deepseek-ai/DeepSeek-V3-0324", seed: str = None):
+    async def inference(self, run_id: str, messages: List[GPTMessage], temperature: float = 0.7, model: str = "deepseek-ai/DeepSeek-V3-0324", seed: int = None):
         self._ensure_cleanup_task()
         
         if not model:
