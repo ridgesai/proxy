@@ -73,7 +73,7 @@ class ChutesManager:
         except Exception as e:
             logger.error(f"Error cleaning up old entries from Chutes pricing data: {e}")
 
-    async def embed(self, run_id: str, prompt: str) -> dict:
+    async def embed(self, run_id: str, prompt: str, seed: str = None) -> dict:
         self._ensure_cleanup_task()
         
         if self.costs_data_embedding.get(run_id, {}).get("spend", 0) >= 2:
@@ -88,7 +88,14 @@ class ChutesManager:
         body = {
             "inputs": prompt
         }
+        
+        # Add seed if provided for cache busting
+        if seed is not None:
+            body["seed"] = seed
+            logger.debug(f"Added seed to embedding request body: {seed}")
 
+        logger.debug(f"Embedding request for run_id: {run_id}, seed: {seed}")
+        
         start = time.time()
         
         try:

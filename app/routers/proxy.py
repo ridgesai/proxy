@@ -56,8 +56,17 @@ async def embedding(request: EmbeddingRequest):
     
     # Rest of the embedding function
     try:
-        embedding = await chutes.embed(request.run_id, request.input)
-        logger.info(f"Embedding SUCCESS - run_id: {request.run_id}")
+        # Generate super random seed for cache busting
+        nanosecond_time = time.time_ns()
+        random_uuid = str(uuid.uuid4())
+        random_int = random.randint(0, 2**32 - 1)
+        seed_string = f"{nanosecond_time}_{random_uuid}_{random_int}"
+        generated_seed = hashlib.sha256(seed_string.encode()).hexdigest()[:16]  # Use first 16 chars of hash
+        
+        logger.info(f"Generated seed for embedding cache busting: {generated_seed}")
+        
+        embedding = await chutes.embed(request.run_id, request.input, generated_seed)
+        logger.info(f"Embedding SUCCESS - run_id: {request.run_id}, seed: {generated_seed}")
         return embedding
     except Exception as e:
         logger.error(f"Embedding FAILED - run_id: {request.run_id}, error: {e}")
