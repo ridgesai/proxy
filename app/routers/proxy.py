@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 import uuid
+import time
+import random
+import hashlib
 
 from app.core.auth import verify_request
 from app.core.chutes_manager import ChutesManager
@@ -99,13 +102,23 @@ async def inference(request: InferenceRequest):
     
     # Rest of the inference function
     try:
+        # Generate super random seed for cache busting
+        nanosecond_time = time.time_ns()
+        random_uuid = str(uuid.uuid4())
+        random_int = random.randint(0, 2**32 - 1)
+        seed_string = f"{nanosecond_time}_{random_uuid}_{random_int}"
+        generated_seed = hashlib.sha256(seed_string.encode()).hexdigest()[:16]  # Use first 16 chars of hash
+        
+        logger.info(f"Generated seed for cache busting: {generated_seed}")
+        
         response = await chutes.inference(
             request.run_id,
             request.messages,
             request.temperature,
-            request.model
+            request.model,
+            generated_seed
         )
-        logger.info(f"Inference SUCCESS - run_id: {request.run_id}, model: {request.model}")
+        logger.info(f"Inference SUCCESS - run_id: {request.run_id}, model: {request.model}, seed: {generated_seed}")
         return response
     except Exception as e:
         logger.error(f"Inference FAILED - run_id: {request.run_id}, model: {request.model}, error: {e}")

@@ -119,7 +119,7 @@ class ChutesManager:
             logger.error(f"Error in embed request: {e}")
             return f"Error in embed request: {e}"
     
-    async def inference(self, run_id: str, messages: List[GPTMessage], temperature: float = 0.7, model: str = "deepseek-ai/DeepSeek-V3-0324"):
+    async def inference(self, run_id: str, messages: List[GPTMessage], temperature: float = 0.7, model: str = "deepseek-ai/DeepSeek-V3-0324", seed: str = None):
         self._ensure_cleanup_task()
         
         if not model:
@@ -145,6 +145,11 @@ class ChutesManager:
             "max_tokens": 1024,
             "temperature": temperature if temperature is not None else 0.7
         }
+        
+        # Add seed if provided for cache busting
+        if seed is not None:
+            body["seed"] = seed
+            logger.debug(f"Added seed to request body: {seed}")
 
         # Check if messages is not None before iterating
         if messages is not None:
@@ -156,6 +161,7 @@ class ChutesManager:
                     })
 
         logger.debug(f"Body: {body}")
+        logger.debug(f"Inference request for run_id: {run_id}, model: {model}, seed: {seed}")
 
         response_chunks = []
         total_tokens = 0
